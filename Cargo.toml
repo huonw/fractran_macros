@@ -1,0 +1,16 @@
+[package]
+
+name = "fractran_macros"
+version = "0.1.0"
+authors = ["Huon Wilson <dbau.pp@gmail.com>"]
+
+[dependencies.slow_primes]
+git = "https://github.com/huonw/slow_primes"
+
+[dependencies.fractran_support]
+path = "fractran_support"
+
+[[lib]]
+
+name = "fractran_macros"
+plugin = true
