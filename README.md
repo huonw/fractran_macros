@@ -4,8 +4,8 @@
 
 A Rust macro for compiling
 [FRACTRAN](https://en.wikipedia.org/wiki/FRACTRAN) programs embedded
-in a Rust program into efficient, allocation-less code at compile
-time.
+in a Rust program into efficient, allocation-less,
+libcore-only<sup>1</sup> code at compile time.
 
 FRACTRAN is a very simple language; a program is an integer `n` along
 with a list of positive fractions, executed by finding the first
@@ -13,6 +13,8 @@ fraction `f` for which `nf` is an integer, replace `n` by `nf` and
 repeating (execution halts when there is no such fraction). It turns
 out that this is Turing complete, and people have even written
 FRACTRAN interpreters in FRACTRAN! (See `examples/fractran.rs`.)
+
+<sup>1</sup>That's right; you can now use FRACTRAN inside a kernel.
 
 ## Usage
 
