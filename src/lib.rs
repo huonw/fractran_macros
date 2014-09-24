@@ -10,11 +10,9 @@ extern crate rustc;
 
 extern crate slow_primes;
 
-use std::gc::Gc;
-use std::{cmp, option};
+use std::cmp;
 
-use syntax::ast;
-use syntax::codemap;
+use syntax::{ast, codemap, ptr};
 use syntax::ext::base::{mod, ExtCtxt, MacResult, MacExpr, DummyResult};
 use syntax::ext::build::AstBuilder;
 use rustc::plugin::Registry;
@@ -28,7 +26,7 @@ mod fract;
 pub fn plugin_registrar(registrar: &mut Registry) {
     registrar.register_macro("fractran", fractran);
 }
-fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
+fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult+'static> {
     let exprs = match base::get_exprs_from_tts(cx, sp, tts)
                           .and_then(|e| extract_exprs(cx, e.as_slice())) {
         None => return DummyResult::expr(sp),
@@ -73,13 +71,13 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
     }))
 }
 
-fn extract_exprs(cx: &mut ExtCtxt, exprs: &[Gc<ast::Expr>]) -> Option<Vec<Fract<Vec<uint>>>> {
-    option::collect(exprs.iter().map(|e| extract_expr(cx, &**e)))
+fn extract_exprs(cx: &mut ExtCtxt, exprs: &[ptr::P<ast::Expr>]) -> Option<Vec<Fract<Vec<uint>>>> {
+    exprs.iter().map(|e| extract_expr(cx, &**e)).collect()
 }
 
 fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> {
     match expr.node {
-        ast::ExprLit(lit) => {
+        ast::ExprLit(ref lit) => {
             match lit.node {
                 ast::LitInt(x, _) => Some(Fract { numer: vec![x as uint], denom: vec![1] }),
                 _ => {
@@ -88,9 +86,9 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
                 }
             }
         }
-        ast::ExprBinary(ast::BiAdd, l, r) => {
-            extract_expr(cx, &*r).and_then(|r| {
-                extract_expr(cx, &*l).map(|l| {
+        ast::ExprBinary(ast::BiAdd, ref l, ref r) => {
+            extract_expr(cx, &**r).and_then(|r| {
+                extract_expr(cx, &**l).map(|l| {
                     let top = l.numer.iter().chain(r.denom.iter()).fold(1, |p, &a| p * a)
                         + r.numer.iter().chain(l.denom.iter()).fold(1, |p, &a| p * a);
 
@@ -101,9 +99,9 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
                 })
             })
         }
-        ast::ExprBinary(ast::BiMul, l, r) => {
-            extract_expr(cx, &*r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &*l).map(|Fract { numer: l_n, denom: l_d }| {
+        ast::ExprBinary(ast::BiMul, ref l, ref r) => {
+            extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
+                extract_expr(cx, &**l).map(|Fract { numer: l_n, denom: l_d }| {
                     Fract {
                         numer: l_n.append(r_n.as_slice()),
                         denom: l_d.append(r_d.as_slice())
@@ -111,9 +109,9 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
                 })
             })
         }
-        ast::ExprBinary(ast::BiDiv, l, r) => {
-            extract_expr(cx, &*r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &*l).map(|Fract { numer: l_n, denom: l_d }| {
+        ast::ExprBinary(ast::BiDiv, ref l, ref r) => {
+            extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
+                extract_expr(cx, &**l).map(|Fract { numer: l_n, denom: l_d }| {
                     Fract {
                         numer: l_n.append(r_d.as_slice()),
                         denom: l_d.append(r_n.as_slice())
@@ -122,9 +120,9 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
             })
         }
         // abusing ^
-        ast::ExprBinary(ast::BiBitXor, l, r) => {
-            extract_expr(cx, &*l).and_then(|Fract { numer, denom }| {
-                extract_expr(cx, &*r).and_then(|Fract { numer: exp_n, denom: exp_d }| {
+        ast::ExprBinary(ast::BiBitXor, ref l, ref r) => {
+            extract_expr(cx, &**l).and_then(|Fract { numer, denom }| {
+                extract_expr(cx, &**r).and_then(|Fract { numer: exp_n, denom: exp_d }| {
                     if !exp_d.iter().all(|n| *n == 1) {
                         cx.span_err(r.span, "exponent must be an integer");
                         return None;
@@ -142,7 +140,7 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
                 })
             })
         }
-        ast::ExprParen(e) => extract_expr(cx, &*e),
+        ast::ExprParen(ref e) => extract_expr(cx, &**e),
         _ => {
             cx.span_err(expr.span,
                         "unsupported expression type inside `fractran!`");
@@ -153,7 +151,7 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
 
 fn construct_states(cx: &ExtCtxt, sp: codemap::Span,
                     fracts: &[(Fract<u64>,
-                               Fract<Vec<u32>>)]) -> (uint, Gc<ast::Expr>) {
+                               Fract<Vec<uint>>)]) -> (uint, ptr::P<ast::Expr>) {
     let length = fracts.iter().map(|&(_, ref f)| {
         cmp::max(f.numer.len(), f.denom.len())
     }).max().unwrap_or(0);
@@ -176,23 +174,25 @@ fn construct_states(cx: &ExtCtxt, sp: codemap::Span,
     (length, states)
 }
 
-struct State<'a, 'b> {
+struct State<'a, 'b: 'a> {
     cx: &'a ExtCtxt<'b>,
     sp: codemap::Span,
-    regs: Gc<ast::Expr>,
+    regs: ptr::P<ast::Expr>,
 }
 
 impl<'a, 'b> State<'a, 'b> {
-    fn check_reg(&self, reg: uint, thresh: u32) -> Gc<ast::Expr> {
-        let regs = self.regs;
+    fn check_reg(&self, reg: uint, thresh: uint) -> ptr::P<ast::Expr> {
+        let regs = &self.regs;
+        let thresh = thresh as u32;
         quote_expr!(&*self.cx, $regs[$reg] >= $thresh )
     }
-    fn step_reg(&self, reg: uint, amt: u32) -> Gc<ast::Expr> {
-        let regs = self.regs;
+    fn step_reg(&self, reg: uint, amt: uint) -> ptr::P<ast::Expr> {
+        let regs = &self.regs;
+        let amt = amt as u32;
         quote_expr!(&*self.cx, $regs[$reg] += $amt)
     }
 
-    fn check_regs(&self, values: &[u32]) -> Gc<ast::Expr> {
+    fn check_regs(&self, values: &[uint]) -> ptr::P<ast::Expr> {
         let mut res = self.cx.expr_bool(self.sp, true);
 
         for (reg, &v) in values.iter().enumerate() {
@@ -204,7 +204,7 @@ impl<'a, 'b> State<'a, 'b> {
         res
     }
     #[allow(unsigned_negate)]
-    fn step_regs(&self, increase: &[u32], decrease: &[u32]) -> ast::P<ast::Block> {
+    fn step_regs(&self, increase: &[uint], decrease: &[uint]) -> ptr::P<ast::Block> {
         let mut stmts = vec![];
         for (reg, &v) in decrease.iter().enumerate() {
             if v > 0 {

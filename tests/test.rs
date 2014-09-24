@@ -10,8 +10,9 @@ macro_rules! go {
          let prog = fractran!($($program),*);
          $(
              {
-                 let mut out = prog($input);
+                 let mut out = prog($input.as_slice());
                  let expected = $expected;
+                 let expected = expected.as_slice();
                  let (matching, zeros) = out.run().split_at(expected.len());
                  assert_eq!(matching, expected);
                  assert!(zeros.iter().all(|x| *x == 0));
@@ -25,11 +26,11 @@ fn test_addition() {
     // 2^a 3^b => 3^(a+b)
     go! {
         3/2;
-        &[0, 0] => &[0, 0],
-        &[1, 0] => &[0, 1],
-        &[0, 1] => &[0, 1],
-        &[1, 1] => &[0, 2],
-        &[12, 34] => &[0, 12 + 34]
+        [0, 0] => [0, 0],
+        [1, 0] => [0, 1],
+        [0, 1] => [0, 1],
+        [1, 1] => [0, 2],
+        [12, 34] => [0, 12 + 34]
     }
 }
 

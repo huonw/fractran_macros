@@ -10,7 +10,10 @@ git = "https://github.com/huonw/slow_primes"
 [dependencies.fractran_support]
 path = "fractran_support"
 
-[[lib]]
+[dependencies.num]
+git = "https://github.com/rust-lang/num"
+
+[lib]
 
 name = "fractran_macros"
 plugin = true

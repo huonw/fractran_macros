@@ -44,7 +44,12 @@ fn main() {
     let mut addition = interpreter(input.as_slice());
 
     let mut count = 0u;
-    for _ in addition {
+    loop {
+        match addition.next() {
+            None => break,
+            Some(_) => {}
+        }
+
         // avoid an infinite loop.
         if count > 1_000_000_000 { break }
 

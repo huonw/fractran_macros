@@ -9,7 +9,7 @@ pub struct Fract<T> {
     pub denom: T,
 }
 
-pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<u32>>)> {
+pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>>)> {
     let largest = fracs.iter().map(|f| {
         f.numer.iter().map(|x| *x)
             .chain(f.denom.iter().map(|x| *x)).max().unwrap_or(1)
@@ -20,7 +20,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<u32>>
         *prime_idx.get_mut(p) = i;
     }
 
-    let combine = |a: &mut Vec<u32>, b: &[(uint, u32)]| {
+    let combine = |a: &mut Vec<uint>, b: &[(uint, uint)]| {
         for &(prime, count) in b.iter() {
             let l = a.len();
             let idx = prime_idx[prime];
@@ -32,17 +32,18 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<u32>>
         }
     };
 
-    let fac = |nums: &[uint]| -> (Vec<u32>, u64) {
+    let fac = |nums: &[uint]| -> (Vec<uint>, u64) {
         let mut ret = vec![];
         let mut prod = 1;
         for n in nums.iter() {
             prod *= *n as u64;
-            combine(&mut ret, primes.factor(*n).as_slice());
+            // by construction, large enough to factor
+            combine(&mut ret, primes.factor(*n).unwrap().as_slice());
         }
         (ret, prod)
     };
-    let cancel = |a: &mut [u32], b: &mut [u32]| {
-        for (x, y) in a.mut_iter().zip(b.mut_iter()) {
+    let cancel = |a: &mut [uint], b: &mut [uint]| {
+        for (x, y) in a.iter_mut().zip(b.iter_mut()) {
             let m = cmp::min(*x, *y);
             *x -= m;
             *y -= m;

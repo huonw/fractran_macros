@@ -17,7 +17,12 @@ fn main() {
 
     let mut count = 0u;
 
-    for _ in primes {
+    loop {
+        match primes.next() {
+            None => break,
+            Some(_) => {}
+        }
+
         if count == 1_000_000_000 { break }
 
         if primes.state().slice_from(1).iter().all(|x| *x == 0) {
