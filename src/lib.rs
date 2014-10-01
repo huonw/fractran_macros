@@ -88,33 +88,37 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
         }
         ast::ExprBinary(ast::BiAdd, ref l, ref r) => {
             extract_expr(cx, &**r).and_then(|r| {
-                extract_expr(cx, &**l).map(|l| {
+                extract_expr(cx, &**l).map(|mut l| {
                     let top = l.numer.iter().chain(r.denom.iter()).fold(1, |p, &a| p * a)
                         + r.numer.iter().chain(l.denom.iter()).fold(1, |p, &a| p * a);
-
+                    l.denom.push_all(r.denom.as_slice());
                     Fract {
                         numer: vec![top],
-                        denom: l.denom.append(r.denom.as_slice())
+                        denom: l.denom
                     }
                 })
             })
         }
         ast::ExprBinary(ast::BiMul, ref l, ref r) => {
             extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &**l).map(|Fract { numer: l_n, denom: l_d }| {
+                extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
+                    l_n.push_all(r_n.as_slice());
+                    l_d.push_all(r_d.as_slice());
                     Fract {
-                        numer: l_n.append(r_n.as_slice()),
-                        denom: l_d.append(r_d.as_slice())
+                        numer: l_n,
+                        denom: l_d,
                     }
                 })
             })
         }
         ast::ExprBinary(ast::BiDiv, ref l, ref r) => {
             extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &**l).map(|Fract { numer: l_n, denom: l_d }| {
+                extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
+                    l_n.push_all(r_d.as_slice());
+                    l_d.push_all(r_n.as_slice());
                     Fract {
-                        numer: l_n.append(r_d.as_slice()),
-                        denom: l_d.append(r_n.as_slice())
+                        numer: l_n,
+                        denom: l_d,
                     }
                 })
             })

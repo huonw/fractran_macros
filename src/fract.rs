@@ -26,7 +26,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
             let idx = prime_idx[prime];
 
             if idx >= l {
-                a.grow(idx - l + 1, &0);
+                a.grow(idx - l + 1, 0);
             }
             *a.get_mut(idx) += count
         }
