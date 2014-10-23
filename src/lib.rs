@@ -61,7 +61,7 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
                 assert!(init.len() <= $length);
 
                 let mut prog = Machine { _regs: [0, .. $length] };
-                for (place, data) in prog._regs.mut_iter().zip(init.iter()) {
+                for (place, data) in prog._regs.iter_mut().zip(init.iter()) {
                     *place = *data
                 }
                 prog
