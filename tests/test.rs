@@ -1,8 +1,6 @@
 #![feature(phase, macro_rules)]
 
 #[phase(plugin)] extern crate fractran_macros;
-extern crate fractran_support;
-use fractran_support::Fractran;
 
 macro_rules! go {
     ($($program: expr),*;

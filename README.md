@@ -46,9 +46,6 @@ method for executing the state machine until it halts.
 #![feature(phase)]
 
 #[phase(plugin)] extern crate fractran_macros;
-extern crate fractran_support;
-
-use fractran_support::Fractran;
 
 fn main() {
     // takes 2^a 3^b to 3^(a+b)
@@ -65,8 +62,6 @@ Remember to ensure the `Cargo.toml` has the appropriate dependencies:
 
 ```toml
 [dependencies.fractran_macros]
-git = "https://github.com/huonw/fractran_macros"
-[dependencies.fractran_support]
 git = "https://github.com/huonw/fractran_macros"
 ```
 

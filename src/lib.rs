@@ -39,20 +39,27 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
 
     MacExpr::new(quote_expr!(cx, {
         mod inner {
-            extern crate fractran_support;
-
             pub struct Machine {
                 _regs: [u32, .. $length]
             }
-            impl Iterator<()> for Machine {
-                fn next(&mut self) -> Option<()> {
+            #[allow(dead_code)]
+            impl Machine {
+                pub fn next(&mut self) -> Option<()> {
                     $states;
                     Some(())
                 }
-            }
-            impl fractran_support::Fractran for Machine {
-                fn state<'a>(&'a self) -> &'a [u32] {
+
+                pub fn state<'a>(&'a self) -> &'a [u32] {
                     self._regs.as_slice()
+                }
+
+                /// Run the program to completion, returning the internal state.
+                pub fn run<'a>(&'a mut self) -> &'a [u32] {
+                    loop {
+                        if self.next().is_none() { break }
+                    }
+
+                    self.state()
                 }
             }
 
