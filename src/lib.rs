@@ -207,7 +207,7 @@ impl<'a, 'b> State<'a, 'b> {
         }
         res
     }
-    #[allow(unsigned_negate)]
+    #[allow(unsigned_negation)]
     fn step_regs(&self, increase: &[uint], decrease: &[uint]) -> ptr::P<ast::Block> {
         let mut stmts = vec![];
         for (reg, &v) in decrease.iter().enumerate() {

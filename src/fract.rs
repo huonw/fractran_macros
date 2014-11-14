@@ -17,7 +17,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
     let primes = Primes::sieve(largest + 1);
     let mut prime_idx = Vec::from_elem(primes.upper_bound() + 1, 0);
     for (i, p) in primes.primes().enumerate() {
-        *prime_idx.get_mut(p) = i;
+        prime_idx[p] = i;
     }
 
     let combine = |a: &mut Vec<uint>, b: &[(uint, uint)]| {
@@ -28,7 +28,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
             if idx >= l {
                 a.grow(idx - l + 1, 0);
             }
-            *a.get_mut(idx) += count
+            a[idx] += count
         }
     };
 
