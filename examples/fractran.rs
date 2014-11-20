@@ -3,10 +3,7 @@
 extern crate test;
 
 #[phase(plugin)] extern crate fractran_macros;
-extern crate fractran_support;
-
-use fractran_support::Fractran;
-use std::num;
+use std::num::Int;
 
 
 fn main() {
@@ -35,7 +32,7 @@ fn main() {
 
     let mut input = [0, .. 46];
     // 3^initial state
-    input[2] = num::pow(2, 4) * num::pow(3, 5);
+    input[2] = 2_u32.pow(4) * 3.pow(5);
     // * 5^encoded program (this one is 3/2, addition)
     input[3] = 475;
     // * 199

@@ -3,9 +3,6 @@
 extern crate test;
 
 #[phase(plugin)] extern crate fractran_macros;
-extern crate fractran_support;
-
-use fractran_support::Fractran;
 
 fn main() {
     // Conway's prime enumeration program. The subsequence of perfect
