@@ -17,8 +17,8 @@ native code.
 
 
 [dependencies]
-slow_primes = "~0.1.2"
-num = ">= 0.0.0"
+slow_primes = "~0.1.4"
+num = "~0.0.5"
 
 [lib]
 
