@@ -13,7 +13,7 @@ extern crate slow_primes;
 use std::cmp;
 
 use syntax::{ast, codemap, ptr};
-use syntax::ext::base::{mod, ExtCtxt, MacResult, MacExpr, DummyResult};
+use syntax::ext::base::{self, ExtCtxt, MacResult, MacExpr, DummyResult};
 use syntax::ext::build::AstBuilder;
 use rustc::plugin::Registry;
 
@@ -40,7 +40,7 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
     MacExpr::new(quote_expr!(cx, {
         mod inner {
             pub struct Machine {
-                _regs: [u32, .. $length]
+                _regs: [u32; $length]
             }
             #[allow(dead_code)]
             impl Machine {
@@ -67,7 +67,7 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
                 // FIXME
                 assert!(init.len() <= $length);
 
-                let mut prog = Machine { _regs: [0, .. $length] };
+                let mut prog = Machine { _regs: [0; $length] };
                 for (place, data) in prog._regs.iter_mut().zip(init.iter()) {
                     *place = *data
                 }

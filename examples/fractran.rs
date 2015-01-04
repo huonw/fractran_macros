@@ -30,7 +30,7 @@ fn main() {
         2*13*353/(5*137), 137/353, 349/137, 107/349, (5^100)*359/((13^100)*149),
         5*359/(13*149), 149/359, 199/149);
 
-    let mut input = [0, .. 46];
+    let mut input = [0; 46];
     // 3^initial state
     input[2] = 2_u32.pow(4) * 3.pow(5);
     // * 5^encoded program (this one is 3/2, addition)

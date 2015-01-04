@@ -1,9 +1,10 @@
 use std::cmp;
+use std::iter::repeat;
 use num::integer;
 
 use slow_primes::Primes;
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct Fract<T> {
     pub numer: T,
     pub denom: T,
@@ -15,7 +16,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
             .chain(f.denom.iter().map(|x| *x)).max().unwrap_or(1)
     }).max().unwrap_or(1);
     let primes = Primes::sieve(largest + 1);
-    let mut prime_idx = Vec::from_elem(primes.upper_bound() + 1, 0);
+    let mut prime_idx = repeat(0).take(primes.upper_bound() + 1).collect::<Vec<_>>();
     for (i, p) in primes.primes().enumerate() {
         prime_idx[p] = i;
     }
@@ -26,7 +27,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
             let idx = prime_idx[prime];
 
             if idx >= l {
-                a.grow(idx - l + 1, 0);
+                a.extend(repeat(0).take(idx - l + 1));
             }
             a[idx] += count
         }

@@ -1,7 +1,7 @@
 [package]
 
 name = "fractran_macros"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Huon Wilson <dbau.pp@gmail.com>"]
 
 homepage = "https://github.com/huonw/fractran_macros"
@@ -18,7 +18,7 @@ native code.
 
 [dependencies]
 slow_primes = "~0.1.4"
-num = "~0.0.5"
+num = "~0"
 
 [lib]
 
