@@ -1,8 +1,7 @@
-#![feature(phase)]
+#![feature(plugin)]
 
-extern crate test;
+#[plugin] #[no_link] extern crate fractran_macros;
 
-#[phase(plugin)] extern crate fractran_macros;
 use std::num::Int;
 
 
@@ -38,9 +37,9 @@ fn main() {
     // * 199
     input[45] = 1;
 
-    let mut addition = interpreter(input.as_slice());
+    let mut addition = interpreter(&input);
 
-    let mut count = 0u;
+    let mut count = 0;
     loop {
         match addition.next() {
             None => break,

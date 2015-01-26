@@ -2,7 +2,7 @@
 
 #![crate_type="dylib"]
 
-#![feature(quote, plugin_registrar, macro_rules)]
+#![feature(quote, plugin_registrar)]
 
 extern crate num;
 extern crate syntax;
@@ -28,14 +28,14 @@ pub fn plugin_registrar(registrar: &mut Registry) {
 }
 fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult+'static> {
     let exprs = match base::get_exprs_from_tts(cx, sp, tts)
-                          .and_then(|e| extract_exprs(cx, e.as_slice())) {
+                          .and_then(|e| extract_exprs(cx, &*e)) {
         None => return DummyResult::expr(sp),
         Some(e) => e,
     };
 
-    let factored = fract::factorise(exprs.as_slice());
+    let factored = fract::factorise(&*exprs);
 
-    let (length, states) = construct_states(cx, sp, factored.as_slice());
+    let (length, states) = construct_states(cx, sp, &*factored);
 
     MacExpr::new(quote_expr!(cx, {
         mod inner {
@@ -78,79 +78,86 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
     }))
 }
 
-fn extract_exprs(cx: &mut ExtCtxt, exprs: &[ptr::P<ast::Expr>]) -> Option<Vec<Fract<Vec<uint>>>> {
+fn extract_exprs(cx: &mut ExtCtxt, exprs: &[ptr::P<ast::Expr>]) -> Option<Vec<Fract<Vec<usize>>>> {
     exprs.iter().map(|e| extract_expr(cx, &**e)).collect()
 }
 
-fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> {
+fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<usize>>> {
     match expr.node {
         ast::ExprLit(ref lit) => {
             match lit.node {
-                ast::LitInt(x, _) => Some(Fract { numer: vec![x as uint], denom: vec![1] }),
+                ast::LitInt(x, _) => Some(Fract { numer: vec![x as usize], denom: vec![1] }),
                 _ => {
                     cx.span_err(lit.span, "unsupported value in `fractran!`");
                     None
                 }
             }
         }
-        ast::ExprBinary(ast::BiAdd, ref l, ref r) => {
-            extract_expr(cx, &**r).and_then(|r| {
-                extract_expr(cx, &**l).map(|mut l| {
-                    let top = l.numer.iter().chain(r.denom.iter()).fold(1, |p, &a| p * a)
-                        + r.numer.iter().chain(l.denom.iter()).fold(1, |p, &a| p * a);
-                    l.denom.push_all(r.denom.as_slice());
-                    Fract {
-                        numer: vec![top],
-                        denom: l.denom
-                    }
+        ast::ExprBinary(op, ref l, ref r) => match op.node {
+            ast::BiAdd => {
+                extract_expr(cx, &**r).and_then(|r| {
+                    extract_expr(cx, &**l).map(|mut l| {
+                        let top = l.numer.iter().chain(r.denom.iter()).fold(1, |p, &a| p * a)
+                            + r.numer.iter().chain(l.denom.iter()).fold(1, |p, &a| p * a);
+                        l.denom.extend(r.denom.iter().cloned());
+                        Fract {
+                            numer: vec![top],
+                            denom: l.denom
+                        }
+                    })
                 })
-            })
-        }
-        ast::ExprBinary(ast::BiMul, ref l, ref r) => {
-            extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
-                    l_n.push_all(r_n.as_slice());
-                    l_d.push_all(r_d.as_slice());
-                    Fract {
-                        numer: l_n,
-                        denom: l_d,
-                    }
+            }
+            ast::BiMul => {
+                extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
+                    extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
+                        l_n.extend(r_n.iter().cloned());
+                        l_d.extend(r_d.iter().cloned());
+                        Fract {
+                            numer: l_n,
+                            denom: l_d,
+                        }
+                    })
                 })
-            })
-        }
-        ast::ExprBinary(ast::BiDiv, ref l, ref r) => {
-            extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
-                extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
-                    l_n.push_all(r_d.as_slice());
-                    l_d.push_all(r_n.as_slice());
-                    Fract {
-                        numer: l_n,
-                        denom: l_d,
-                    }
+            }
+            ast::BiDiv => {
+                extract_expr(cx, &**r).and_then(|Fract { numer: r_n, denom: r_d }| {
+                    extract_expr(cx, &**l).map(|Fract { numer: mut l_n, denom: mut l_d }| {
+                        l_n.extend(r_d.iter().cloned());
+                        l_d.extend(r_n.iter().cloned());
+                        Fract {
+                            numer: l_n,
+                            denom: l_d,
+                        }
+                    })
                 })
-            })
-        }
-        // abusing ^
-        ast::ExprBinary(ast::BiBitXor, ref l, ref r) => {
-            extract_expr(cx, &**l).and_then(|Fract { numer, denom }| {
-                extract_expr(cx, &**r).and_then(|Fract { numer: exp_n, denom: exp_d }| {
-                    if !exp_d.iter().all(|n| *n == 1) {
-                        cx.span_err(r.span, "exponent must be an integer");
-                        return None;
-                    }
+            }
+            // abusing ^
+            ast::BiBitXor => {
+                extract_expr(cx, &**l).and_then(|Fract { numer, denom }| {
+                    extract_expr(cx, &**r).and_then(|Fract { numer: exp_n, denom: exp_d }| {
+                        if !exp_d.iter().all(|n| *n == 1) {
+                            cx.span_err(r.span, "exponent must be an integer");
+                            return None;
+                        }
 
-                    let repeat = exp_n.iter().fold(1, |a, &n| a * n);
-                    let mut ret_n = Vec::with_capacity(numer.len() * repeat);
-                    let mut ret_d = Vec::with_capacity(numer.len() * repeat);
-                    for _ in range(0u, repeat) {
-                        ret_n.push_all(numer.as_slice());
-                        ret_d.push_all(denom.as_slice());
-                    }
+                        let repeat = exp_n.iter().fold(1, |a, &n| a * n);
+                        let mut ret_n = Vec::with_capacity(numer.len() * repeat);
+                        let mut ret_d = Vec::with_capacity(numer.len() * repeat);
+                        for _ in 0..(repeat) {
+                            ret_n.extend(numer.iter().cloned());
+                            ret_d.extend(denom.iter().cloned());
+                        }
 
-                    Some(Fract { numer: ret_n, denom: ret_d })
+                        Some(Fract { numer: ret_n, denom: ret_d })
+                    })
                 })
-            })
-        }
+            }
+            _ => {
+                cx.span_err(expr.span,
+                            "unsupported expression type inside `fractran!`");
+                None
+            }
+        },
         ast::ExprParen(ref e) => extract_expr(cx, &**e),
         _ => {
             cx.span_err(expr.span,
@@ -161,8 +168,8 @@ fn extract_expr(cx: &mut ExtCtxt, expr: &ast::Expr) -> Option<Fract<Vec<uint>>> 
 }
 
 fn construct_states(cx: &ExtCtxt, sp: codemap::Span,
-                    fracts: &[(Fract<u64>,
-                               Fract<Vec<uint>>)]) -> (uint, ptr::P<ast::Expr>) {
+                    fracts: &[(Fract<usize>,
+                               Fract<Vec<usize>>)]) -> (usize, ptr::P<ast::Expr>) {
     let length = fracts.iter().map(|&(_, ref f)| {
         cmp::max(f.numer.len(), f.denom.len())
     }).max().unwrap_or(0);
@@ -177,8 +184,8 @@ fn construct_states(cx: &ExtCtxt, sp: codemap::Span,
     let mut states = quote_expr!(cx, { return None });
 
     for &(_, ref f) in fracts.iter().rev() {
-        let cond = st.check_regs(f.denom.as_slice());
-        let exec = st.step_regs(f.numer.as_slice(), f.denom.as_slice());
+        let cond = st.check_regs(&*f.denom);
+        let exec = st.step_regs(&*f.numer, &*f.denom);
         states = cx.expr(sp, ast::ExprIf(cond, exec, Some(states)));
     }
 
@@ -192,18 +199,18 @@ struct State<'a, 'b: 'a> {
 }
 
 impl<'a, 'b> State<'a, 'b> {
-    fn check_reg(&self, reg: uint, thresh: uint) -> ptr::P<ast::Expr> {
+    fn check_reg(&self, reg: usize, thresh: usize) -> ptr::P<ast::Expr> {
         let regs = &self.regs;
         let thresh = thresh as u32;
         quote_expr!(&*self.cx, $regs[$reg] >= $thresh )
     }
-    fn step_reg(&self, reg: uint, amt: uint) -> ptr::P<ast::Expr> {
+    fn step_reg(&self, reg: usize, amt: usize) -> ptr::P<ast::Expr> {
         let regs = &self.regs;
         let amt = amt as u32;
         quote_expr!(&*self.cx, $regs[$reg] += $amt)
     }
 
-    fn check_regs(&self, values: &[uint]) -> ptr::P<ast::Expr> {
+    fn check_regs(&self, values: &[usize]) -> ptr::P<ast::Expr> {
         let mut res = self.cx.expr_bool(self.sp, true);
 
         for (reg, &v) in values.iter().enumerate() {
@@ -215,7 +222,7 @@ impl<'a, 'b> State<'a, 'b> {
         res
     }
     #[allow(unsigned_negation)]
-    fn step_regs(&self, increase: &[uint], decrease: &[uint]) -> ptr::P<ast::Block> {
+    fn step_regs(&self, increase: &[usize], decrease: &[usize]) -> ptr::P<ast::Block> {
         let mut stmts = vec![];
         for (reg, &v) in decrease.iter().enumerate() {
             if v > 0 {

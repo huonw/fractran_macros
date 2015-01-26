@@ -1,8 +1,7 @@
-#![feature(phase)]
+#![feature(plugin)]
 
-extern crate test;
+#[plugin] #[no_link] extern crate fractran_macros;
 
-#[phase(plugin)] extern crate fractran_macros;
 
 fn main() {
     // Conway's prime enumeration program. The subsequence of perfect
@@ -12,7 +11,7 @@ fn main() {
     let mut primes = fractran!(17/91, 78/85, 19/51, 23/38, 29/33, 77/29, 95/23, 77/19, 1/17,
                                11/13, 13/11, 15/14, 15/2, 55/1)(&[1]);
 
-    let mut count = 0u;
+    let mut count = 0;
 
     loop {
         match primes.next() {
@@ -22,7 +21,7 @@ fn main() {
 
         if count == 1_000_000_000 { break }
 
-        if primes.state().slice_from(1).iter().all(|x| *x == 0) {
+        if primes.state()[1..].iter().all(|x| *x == 0) {
             println!("{} (step {})", primes.state()[0], count)
         }
 

@@ -10,7 +10,7 @@ pub struct Fract<T> {
     pub denom: T,
 }
 
-pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>>)> {
+pub fn factorise(fracs: &[Fract<Vec<usize>>]) -> Vec<(Fract<usize>, Fract<Vec<usize>>)> {
     let largest = fracs.iter().map(|f| {
         f.numer.iter().map(|x| *x)
             .chain(f.denom.iter().map(|x| *x)).max().unwrap_or(1)
@@ -21,7 +21,7 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
         prime_idx[p] = i;
     }
 
-    let combine = |a: &mut Vec<uint>, b: &[(uint, uint)]| {
+    let combine = |&: a: &mut Vec<usize>, b: &[(usize, usize)]| {
         for &(prime, count) in b.iter() {
             let l = a.len();
             let idx = prime_idx[prime];
@@ -33,17 +33,17 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
         }
     };
 
-    let fac = |nums: &[uint]| -> (Vec<uint>, u64) {
+    let fac = |&: nums: &[usize]| -> (Vec<usize>, usize) {
         let mut ret = vec![];
         let mut prod = 1;
         for n in nums.iter() {
-            prod *= *n as u64;
+            prod *= *n as usize;
             // by construction, large enough to factor
-            combine(&mut ret, primes.factor(*n).unwrap().as_slice());
+            combine(&mut ret, &*primes.factor(*n as usize).ok().unwrap());
         }
         (ret, prod)
     };
-    let cancel = |a: &mut [uint], b: &mut [uint]| {
+    let cancel = |&: a: &mut [usize], b: &mut [usize]| {
         for (x, y) in a.iter_mut().zip(b.iter_mut()) {
             let m = cmp::min(*x, *y);
             *x -= m;
@@ -52,9 +52,9 @@ pub fn factorise(fracs: &[Fract<Vec<uint>>]) -> Vec<(Fract<u64>, Fract<Vec<uint>
     };
 
     fracs.iter().map(|frac| {
-        let (mut n, n_prod) = fac(frac.numer.as_slice());
-        let (mut d, d_prod) = fac(frac.denom.as_slice());
-        cancel(n.as_mut_slice(), d.as_mut_slice());
+        let (mut n, n_prod) = fac(&*frac.numer);
+        let (mut d, d_prod) = fac(&*frac.denom);
+        cancel(&mut *n, &mut *d);
 
         let gcd = integer::gcd(n_prod, d_prod);
 
