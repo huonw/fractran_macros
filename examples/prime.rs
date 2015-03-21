@@ -1,7 +1,6 @@
 #![feature(plugin)]
 
-#[plugin] #[no_link] extern crate fractran_macros;
-
+#![plugin(fractran_macros)]
 
 fn main() {
     // Conway's prime enumeration program. The subsequence of perfect

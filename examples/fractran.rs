@@ -1,11 +1,14 @@
 #![feature(plugin)]
 
-#[plugin] #[no_link] extern crate fractran_macros;
+#![plugin(fractran_macros)]
 
-use std::num::Int;
+#[cfg(not(doesnt_work))]
+fn main() {}
 
-
+#[cfg(doesnt_work)]
 fn main() {
+    use std::num::Int;
+
     // A fractran interpreter in fractran
     // http://stackoverflow.com/a/1802570/1256624
     //

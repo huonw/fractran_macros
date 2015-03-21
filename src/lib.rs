@@ -1,8 +1,5 @@
 //! A macro that parses & compiles fractran code at compile-time.
-
-#![crate_type="dylib"]
-
-#![feature(quote, plugin_registrar)]
+#![feature(quote, plugin_registrar, rustc_private, core)]
 
 extern crate num;
 extern crate syntax;
@@ -13,7 +10,7 @@ extern crate slow_primes;
 use std::cmp;
 
 use syntax::{ast, codemap, ptr};
-use syntax::ext::base::{self, ExtCtxt, MacResult, MacExpr, DummyResult};
+use syntax::ext::base::{self, ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use rustc::plugin::Registry;
 
@@ -37,7 +34,7 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
 
     let (length, states) = construct_states(cx, sp, &*factored);
 
-    MacExpr::new(quote_expr!(cx, {
+    MacEager::expr(quote_expr!(cx, {
         mod inner {
             pub struct Machine {
                 _regs: [u32; $length]
@@ -50,7 +47,7 @@ fn fractran(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<
                 }
 
                 pub fn state<'a>(&'a self) -> &'a [u32] {
-                    self._regs.as_slice()
+                    &self._regs
                 }
 
                 /// Run the program to completion, returning the internal state.
@@ -204,10 +201,15 @@ impl<'a, 'b> State<'a, 'b> {
         let thresh = thresh as u32;
         quote_expr!(&*self.cx, $regs[$reg] >= $thresh )
     }
-    fn step_reg(&self, reg: usize, amt: usize) -> ptr::P<ast::Expr> {
+    fn up_reg(&self, reg: usize, amt: usize) -> ptr::P<ast::Expr> {
         let regs = &self.regs;
         let amt = amt as u32;
         quote_expr!(&*self.cx, $regs[$reg] += $amt)
+    }
+    fn down_reg(&self, reg: usize, amt: usize) -> ptr::P<ast::Expr> {
+        let regs = &self.regs;
+        let amt = amt as u32;
+        quote_expr!(&*self.cx, $regs[$reg] -= $amt)
     }
 
     fn check_regs(&self, values: &[usize]) -> ptr::P<ast::Expr> {
@@ -226,12 +228,12 @@ impl<'a, 'b> State<'a, 'b> {
         let mut stmts = vec![];
         for (reg, &v) in decrease.iter().enumerate() {
             if v > 0 {
-                stmts.push(self.cx.stmt_expr(self.step_reg(reg, -v)))
+                stmts.push(self.cx.stmt_expr(self.down_reg(reg, v)))
             }
         }
         for (reg, &v) in increase.iter().enumerate() {
             if v > 0 {
-                stmts.push(self.cx.stmt_expr(self.step_reg(reg, v)))
+                stmts.push(self.cx.stmt_expr(self.up_reg(reg, v)))
             }
         }
         self.cx.block(self.sp, stmts, None)

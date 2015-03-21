@@ -4,7 +4,7 @@ use num::integer;
 
 use slow_primes::Primes;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Fract<T> {
     pub numer: T,
     pub denom: T,
@@ -21,7 +21,7 @@ pub fn factorise(fracs: &[Fract<Vec<usize>>]) -> Vec<(Fract<usize>, Fract<Vec<us
         prime_idx[p] = i;
     }
 
-    let combine = |&: a: &mut Vec<usize>, b: &[(usize, usize)]| {
+    let combine = |a: &mut Vec<usize>, b: &[(usize, usize)]| {
         for &(prime, count) in b.iter() {
             let l = a.len();
             let idx = prime_idx[prime];
@@ -33,7 +33,7 @@ pub fn factorise(fracs: &[Fract<Vec<usize>>]) -> Vec<(Fract<usize>, Fract<Vec<us
         }
     };
 
-    let fac = |&: nums: &[usize]| -> (Vec<usize>, usize) {
+    let fac = |nums: &[usize]| -> (Vec<usize>, usize) {
         let mut ret = vec![];
         let mut prod = 1;
         for n in nums.iter() {
@@ -43,7 +43,7 @@ pub fn factorise(fracs: &[Fract<Vec<usize>>]) -> Vec<(Fract<usize>, Fract<Vec<us
         }
         (ret, prod)
     };
-    let cancel = |&: a: &mut [usize], b: &mut [usize]| {
+    let cancel = |a: &mut [usize], b: &mut [usize]| {
         for (x, y) in a.iter_mut().zip(b.iter_mut()) {
             let m = cmp::min(*x, *y);
             *x -= m;

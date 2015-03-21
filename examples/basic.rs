@@ -1,6 +1,5 @@
 #![feature(plugin)]
-
-#[plugin] #[no_link] extern crate fractran_macros;
+#![plugin(fractran_macros)]
 
 fn main() {
     let add = fractran!(3 / 2);

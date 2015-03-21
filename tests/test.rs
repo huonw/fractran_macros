@@ -1,6 +1,6 @@
 #![feature(plugin)]
 
-#[plugin] #[no_link] extern crate fractran_macros;
+#![plugin(fractran_macros)]
 
 macro_rules! go {
     ($($program: expr),*;
@@ -8,9 +8,9 @@ macro_rules! go {
          let prog = fractran!($($program),*);
          $(
              {
-                 let mut out = prog($input.as_slice());
+                 let mut out = prog(&$input[..]);
                  let expected = $expected;
-                 let expected = expected.as_slice();
+                 let expected = &expected[..];
                  let (matching, zeros) = out.run().split_at(expected.len());
                  assert_eq!(matching, expected);
                  assert!(zeros.iter().all(|x| *x == 0));
